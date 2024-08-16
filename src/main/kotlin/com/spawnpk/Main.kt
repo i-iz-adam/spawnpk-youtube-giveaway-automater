@@ -20,24 +20,9 @@ object Main {
     private const val APPLICATION_NAME = "YouTube Automation"
     private val JSON_FACTORY: JsonFactory = GsonFactory.getDefaultInstance()
     private const val TOKENS_DIRECTORY_PATH = "tokens"
-    private const val AUTH_CODE_FILE = "auth_code.txt" // File to save and reuse the authorization code
     private val SCOPES = listOf(YouTubeScopes.YOUTUBE_FORCE_SSL)
-    private const val CREDENTIALS_FILE_PATH = "/client_secrets.json"
+    private const val CREDENTIALS_FILE_PATH = "/client_secrets_2nd.json"
 
-    private fun getSavedAuthCode(): String? {
-        val file = File(TOKENS_DIRECTORY_PATH, AUTH_CODE_FILE)
-        return if (file.exists()) {
-            file.readText().trim()
-        } else {
-            null
-        }
-    }
-
-    private fun saveAuthCode(authCode: String) {
-        val file = File(TOKENS_DIRECTORY_PATH, AUTH_CODE_FILE)
-        file.parentFile.mkdirs() // Ensure the directory exists
-        file.writeText(authCode.trim())
-    }
 
     private fun getCredentials(HTTP_TRANSPORT: NetHttpTransport): Credential {
         val inputStream = Main::class.java.getResourceAsStream(CREDENTIALS_FILE_PATH)
@@ -48,28 +33,18 @@ object Main {
         val flow = GoogleAuthorizationCodeFlow.Builder(
             HTTP_TRANSPORT, JSON_FACTORY, clientSecrets, SCOPES
         )
-            .setDataStoreFactory(FileDataStoreFactory(File(TOKENS_DIRECTORY_PATH)))
+            .setDataStoreFactory(FileDataStoreFactory(java.io.File(TOKENS_DIRECTORY_PATH)))
             .setAccessType("offline")
             .build()
 
-        // Check for saved authorization code
-        val savedAuthCode = getSavedAuthCode()
+        // Manual Authorization: Redirect to a browser and have the user paste the code
         val authorizationUrl = flow.newAuthorizationUrl().setRedirectUri("urn:ietf:wg:oauth:2.0:oob").build()
+        println("Please open the following URL in your browser to authorize the application:")
+        println(authorizationUrl)
 
-        val code = if (savedAuthCode != null) {
-            println("Using saved authorization code.")
-            savedAuthCode
-        } else {
-            // Manual Authorization: Redirect to a browser and have the user paste the code
-            println("Please open the following URL in your browser to authorize the application:")
-            println(authorizationUrl)
-
-            // Prompt user to enter the authorization code manually
-            print("Enter the authorization code: ")
-            val enteredCode = readLine() ?: throw Exception("Authorization code not entered.")
-            saveAuthCode(enteredCode)
-            enteredCode
-        }
+        // Prompt user to enter the authorization code manually
+        print("Enter the authorization code: ")
+        val code = readLine()
 
         val tokenResponse = flow.newTokenRequest(code).setRedirectUri("urn:ietf:wg:oauth:2.0:oob").execute()
         return flow.createAndStoreCredential(tokenResponse, "user")
@@ -161,7 +136,7 @@ object Main {
 
                 // Comment on the video
                 val commentSnippet = CommentSnippet().apply {
-                    textOriginal = "ign: rsps guru"
+                    textOriginal = "ign: adam200214"
                 }
                 val commentThread = CommentThread().apply {
                     snippet = CommentThreadSnippet().apply {

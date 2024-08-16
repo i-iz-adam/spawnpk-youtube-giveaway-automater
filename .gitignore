@@ -1,0 +1,54 @@
+# Kotlin
+*.iml
+.gradle
+/build/
+!gradle/wrapper/gradle-wrapper.jar
+/gradle
+/out/
+.idea/
+.DS_Store
+/local.properties
+/.idea
+/.idea/*
+*.log
+*.tmp
+*.swp
+*.swo
+
+# Gradle
+.gradle/
+/build/
+/gradle/
+/out/
+/!gradle/wrapper/gradle-wrapper.jar
+
+# Ignore Eclipse files
+*.classpath
+*.project
+*.settings/
+*.metadata/
+
+# Ignore IntelliJ IDEA files
+.idea/
+/*.iml
+*.iws
+*.ipr
+
+# Ignore Linux or macOS system files
+.DS_Store
+Thumbs.db
+
+# Ignore OAuth token and authorization code files
+tokens/
+auth_code.txt
+
+# Ignore application-specific configuration
+client_secrets.json
+
+# Ignore the specific auth_code.txt file
+tokens/auth_code.txt
+
+# Ignore any secret or sensitive files
+.secret/
+.env
+/.idea

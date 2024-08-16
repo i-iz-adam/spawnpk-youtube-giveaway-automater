@@ -52,3 +52,4 @@ tokens/auth_code.txt
 .secret/
 .env
 /.idea
+src/main/resources/client_secrets_2nd.json

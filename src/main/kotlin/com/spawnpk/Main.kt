@@ -17,6 +17,8 @@ import java.awt.BorderLayout
 import java.awt.Dimension
 import java.awt.GridLayout
 import java.awt.Image
+import java.awt.event.MouseAdapter
+import java.awt.event.MouseEvent
 import java.io.InputStreamReader
 import java.net.URL
 import javax.imageio.ImageIO
@@ -27,7 +29,7 @@ object Main {
     private val JSON_FACTORY: JsonFactory = GsonFactory.getDefaultInstance()
     private const val TOKENS_DIRECTORY_PATH = "tokens"
     private val SCOPES = listOf(YouTubeScopes.YOUTUBE_FORCE_SSL)
-    private const val CREDENTIALS_FILE_PATH = "/client_secrets.json"
+    private const val CREDENTIALS_FILE_PATH = "/client_secrets_2nd.json"
 
     private fun getCredentials(HTTP_TRANSPORT: NetHttpTransport): Credential {
         val inputStream = Main::class.java.getResourceAsStream(CREDENTIALS_FILE_PATH)
@@ -128,6 +130,12 @@ object Main {
                 thumbnailLabel.icon = ImageIcon(image)
             }
 
+            thumbnailLabel.addMouseListener(object : MouseAdapter() {
+                override fun mouseClicked(e: MouseEvent?) {
+                    println("Video URL: https://www.youtube.com/watch?v=${video.id.videoId}")
+                }
+            })
+
             // Check if actions are needed (like, comment, subscribe)
             val isAlreadyProcessed = checkVideoProcessed(youtubeService, video)
 
@@ -161,6 +169,7 @@ object Main {
         val videoId = video.id.videoId
         val channelId = video.snippet.channelId
 
+        // Check if subscribed to the channel
         val subscriptionStatus = youtubeService.subscriptions().list("snippet,contentDetails")
             .setMine(true)
             .setForChannelId(channelId)
@@ -168,13 +177,33 @@ object Main {
 
         val isSubscribed = subscriptionStatus.items.isNotEmpty()
 
+        // Check if the video is liked
         val likeStatus = youtubeService.videos().getRating(videoId).execute().items
             .firstOrNull { it.rating == "like" }
 
         val isLiked = likeStatus != null
 
-        isSubscribed && isLiked
+        // Retrieve the authenticated user's channel ID
+        val userChannelId = youtubeService.channels().list("id")
+            .setMine(true)
+            .execute()
+            .items
+            .firstOrNull()
+            ?.id ?: return@withContext false
+
+        // Check if the authenticated user has commented on the video
+        val commentsList = youtubeService.commentThreads().list("snippet")
+            .setVideoId(videoId)
+            .setTextFormat("plainText")
+            .execute()
+
+        val hasComment = commentsList.items.any {
+            it.snippet.topLevelComment.snippet.authorChannelId == userChannelId
+        }
+
+        isSubscribed && isLiked && hasComment
     }
+
 
     private suspend fun processVideo(youtubeService: YouTube, video: SearchResult) = withContext(Dispatchers.IO) {
         val videoId = video.id.videoId

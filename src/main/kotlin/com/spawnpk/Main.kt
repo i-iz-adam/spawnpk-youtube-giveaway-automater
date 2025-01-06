@@ -136,7 +136,7 @@ object Main {
 
                 // Comment on the video
                 val commentSnippet = CommentSnippet().apply {
-                    textOriginal = "ign: adam200214"
+                    textOriginal = "ign: rsps guru"
                 }
                 val commentThread = CommentThread().apply {
                     snippet = CommentThreadSnippet().apply {

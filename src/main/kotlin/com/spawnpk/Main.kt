@@ -101,16 +101,16 @@ object Main {
             val videoTitle = video.snippet.title
             val channelId = video.snippet.channelId
 
+            if(!videoTitle.contains("spawnpk", true) && !videoTitle.contains("spawn pk", true) && !videoTitle.contains("spawnpk", true))
+                continue;
             println("Checking video: $videoTitle")
 
-            // Check subscription status
             val subscriptionStatus = youtubeService.subscriptions().list("snippet,contentDetails")
                 .setMine(true)
                 .setForChannelId(channelId)
                 .execute()
 
             if (subscriptionStatus.items.isEmpty()) {
-                // Subscribe to the channel
                 val subscription = Subscription().apply {
                     snippet = SubscriptionSnippet().apply {
                         resourceId = ResourceId().apply {

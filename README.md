@@ -1,14 +1,15 @@
-
 # YouTube Automation Project
 
 This project is a Kotlin-based application that interacts with the YouTube Data API. It can search for videos with specific keywords, like videos, post comments, and subscribe to channels automatically. This README will guide you through setting up the project, configuring your own Google Cloud project, and running the application.
 
 ## Features
 
-- Search YouTube for videos based on specific keywords.
-- Automatically like videos.
-- Post comments on videos.
-- Subscribe to YouTube channels.
+- 🔍 **Search YouTube** for videos based on specific keywords.
+- 👍 **Automatically like** videos.
+- 💬 **Post comments** on videos.
+- 📺 **Subscribe** to YouTube channels.
+- 🛡️ **Automatic OAuth 2.0 authentication** (no more copy-paste).
+- 🗃️ **Token storage** for seamless future runs.
 
 ## Prerequisites
 
@@ -52,9 +53,9 @@ cd your-repository
 
 ### 3. Configure OAuth 2.0 Credentials
 
-The project uses OAuth 2.0 to authenticate with the YouTube Data API. The first time you run the application, it will prompt you to authorize the app via a browser.
+The project now uses an automatic OAuth 2.0 flow. When you run the application, it will open your browser for authentication. After you grant access, you can simply close the browser tab. No need to copy-paste any code.
 
-- The authorization code will be saved for future use in the `tokens/auth_code.txt` file.
+- The authorization tokens will be saved for future use in the `tokens` directory.
 
 ### 4. Build and Run the Project
 
@@ -72,13 +73,12 @@ The project uses OAuth 2.0 to authenticate with the YouTube Data API. The first 
 
 ### 5. How the Application Works
 
-- On the first run, the application will prompt you to visit an authorization URL in your browser and enter the authorization code.
-- The authorization code will be saved in `tokens/auth_code.txt` for future runs.
+- On the first run, the application will open your browser to authorize the app. After granting access, you can close the browser tab.
 - The application will search for videos based on predefined keywords, like them, comment on them, and subscribe to channels if you're not already subscribed.
 
 ## Troubleshooting
 
-- **Authorization Issues**: If you encounter issues with OAuth authorization, try deleting the `tokens` directory and rerunning the application to generate a new authorization code.
+- **Authorization Issues**: If you encounter issues with OAuth authorization, try deleting the `tokens` directory and rerunning the application to generate a new authorization token.
 - **API Quotas**: Ensure that your usage of the YouTube Data API stays within the free tier limits. Monitor your quota usage in the Google Cloud Console.
 
 ## Security

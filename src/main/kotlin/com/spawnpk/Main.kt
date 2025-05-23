@@ -37,16 +37,41 @@ object Main {
             .setAccessType("offline")
             .build()
 
-        // Manual Authorization: Redirect to a browser and have the user paste the code
-        val authorizationUrl = flow.newAuthorizationUrl().setRedirectUri("urn:ietf:wg:oauth:2.0:oob").build()
-        println("Please open the following URL in your browser to authorize the application:")
-        println(authorizationUrl)
+        // Try to load existing credentials
+        val credential = flow.loadCredential("user")
+        if (credential != null && credential.refreshToken() && credential.accessToken != null) {
+            return credential
+        }
 
-        // Prompt user to enter the authorization code manually
-        print("Enter the authorization code: ")
-        val code = readLine()
+        // Use a local redirect URI for automatic browser-based OAuth
+        val redirectUri = "http://localhost:8888/callback"
+        val authorizationUrl = flow.newAuthorizationUrl().setRedirectUri(redirectUri).build()
+        println("Opening the browser for authorization...")
+        java.awt.Desktop.getDesktop().browse(java.net.URI(authorizationUrl))
 
-        val tokenResponse = flow.newTokenRequest(code).setRedirectUri("urn:ietf:wg:oauth:2.0:oob").execute()
+        // Start a simple HTTP server to listen for the OAuth callback
+        val server = com.sun.net.httpserver.HttpServer.create(java.net.InetSocketAddress(8888), 0)
+        var code: String? = null
+        val lock = Object()
+        server.createContext("/callback") { exchange ->
+            val query = exchange.requestURI.query
+            val params = query?.split("&")?.associate {
+                val (k, v) = it.split("=")
+                k to v
+            } ?: emptyMap()
+            code = params["code"]
+            val response = "Authorization successful! You can close this window."
+            exchange.sendResponseHeaders(200, response.length.toLong())
+            exchange.responseBody.use { it.write(response.toByteArray()) }
+            synchronized(lock) { lock.notify() }
+        }
+        server.start()
+        synchronized(lock) {
+            while (code == null) lock.wait()
+        }
+        server.stop(0)
+
+        val tokenResponse = flow.newTokenRequest(code).setRedirectUri(redirectUri).execute()
         return flow.createAndStoreCredential(tokenResponse, "user")
     }
 
@@ -97,62 +122,70 @@ object Main {
         println("Found ${allVideos.size} unique videos")
 
         for (video in allVideos) {
-            val videoId = video.id.videoId
-            val videoTitle = video.snippet.title
-            val channelId = video.snippet.channelId
+            try {
+                val videoId = video.id.videoId
+                val videoTitle = video.snippet.title
+                val channelId = video.snippet.channelId
 
-            if(!videoTitle.contains("spawnpk", true) && !videoTitle.contains("spawn pk", true) && !videoTitle.contains("spawnpk", true))
-                continue;
-            println("Checking video: $videoTitle")
+                if (!videoTitle.contains("spawnpk", true) && !videoTitle.contains(
+                        "spawn pk",
+                        true
+                    ) && !videoTitle.contains("spawnpk", true)
+                )
+                    continue;
+                println("Checking video: $videoTitle")
 
-            val subscriptionStatus = youtubeService.subscriptions().list("snippet,contentDetails")
-                .setMine(true)
-                .setForChannelId(channelId)
-                .execute()
+                val subscriptionStatus = youtubeService.subscriptions().list("snippet,contentDetails")
+                    .setMine(true)
+                    .setForChannelId(channelId)
+                    .execute()
 
-            if (subscriptionStatus.items.isEmpty()) {
-                val subscription = Subscription().apply {
-                    snippet = SubscriptionSnippet().apply {
-                        resourceId = ResourceId().apply {
-                            kind = "youtube#channel"
-                            this.channelId = channelId
+                if (subscriptionStatus.items.isEmpty()) {
+                    val subscription = Subscription().apply {
+                        snippet = SubscriptionSnippet().apply {
+                            resourceId = ResourceId().apply {
+                                kind = "youtube#channel"
+                                this.channelId = channelId
+                            }
                         }
                     }
+                    youtubeService.subscriptions().insert("snippet", subscription).execute()
+                    println("Subscribed to channel: ${video.snippet.channelTitle}")
+                } else {
+                    println("Already subscribed to channel: ${video.snippet.channelTitle}")
                 }
-                youtubeService.subscriptions().insert("snippet", subscription).execute()
-                println("Subscribed to channel: ${video.snippet.channelTitle}")
-            } else {
-                println("Already subscribed to channel: ${video.snippet.channelTitle}")
-            }
 
-            // Check if the video has been liked or commented on
-            val likeStatus = youtubeService.videos().getRating(videoId).execute().items
-                .firstOrNull { it.rating == "like" }
+                // Check if the video has been liked or commented on
+                val likeStatus = youtubeService.videos().getRating(videoId).execute().items
+                    .firstOrNull { it.rating == "like" }
 
-            if (likeStatus == null) {
-                // Like the video
-                youtubeService.videos().rate(videoId, "like").execute()
-                println("Liked video: $videoTitle")
+                if (likeStatus == null) {
+                    // Like the video
+                    youtubeService.videos().rate(videoId, "like").execute()
+                    println("Liked video: $videoTitle")
 
-                // Comment on the video
-                val commentSnippet = CommentSnippet().apply {
-                    textOriginal = "ign: rsps guru"
-                }
-                val commentThread = CommentThread().apply {
-                    snippet = CommentThreadSnippet().apply {
-                        this.videoId = videoId // Ensure the videoId is set here
-                        topLevelComment = Comment().apply {
-                            snippet = commentSnippet
+                    // Comment on the video
+                    val commentSnippet = CommentSnippet().apply {
+                        textOriginal = "ign: rsps guru"
+                    }
+                    val commentThread = CommentThread().apply {
+                        snippet = CommentThreadSnippet().apply {
+                            this.videoId = videoId // Ensure the videoId is set here
+                            topLevelComment = Comment().apply {
+                                snippet = commentSnippet
+                            }
                         }
                     }
+                    youtubeService.commentThreads().insert("snippet", commentThread).execute()
+                    println("Commented on video: $videoTitle")
+                } else {
+                    println("Video already liked/commented: $videoTitle")
                 }
-                youtubeService.commentThreads().insert("snippet", commentThread).execute()
-                println("Commented on video: $videoTitle")
-            } else {
-                println("Video already liked/commented: $videoTitle")
+                println(" - ")
+                println(" - ")
+            } catch (ex: Exception) {
+                println("Error on video ${video.snippet.title}, ${ex.message}")
             }
-            println(" - ")
-            println(" - ")
         }
     }
 }
